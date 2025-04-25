@@ -1,0 +1,183 @@
+backend:
+
+src/controllers/auth/googleAuthHandler.js:
+import prisma from "../../prisma/prismaClient.js";
+
+export const googleAuthHandler = async (req, res) => {
+  const userInfo = req.body;
+
+  if (!userInfo.email) {
+    return res.status(400).json({ message: "O uso do e-mail obrigatório!" });
+  }
+
+  try {
+
+    let user = await prisma.user.findUnique({ where: { email: userInfo.email } });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email: userInfo.email,
+          name: userInfo.name,
+          provider: userInfo.provider
+        }
+      })
+    }
+
+    res.status(200).json({ message: "Usuário cadastrado com sucesso pelo Google!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Occorreu um erro (inteiro) ao cadastrar o usuário!" });
+  }
+}
+
+src/controllers/auth/privateAuthController.js:
+import prisma from "../../prisma/prismaClient.js";
+
+export const login = async (req, res) => {
+  try {
+    await prisma.user.findMany();
+
+    res.status(200).json({ message: "Usuário encontrado com sucesso!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Usuário não encontrado!" });
+  }
+}
+
+src/controllers/auth/publicAuthController.js:
+import prisma from "../../prisma/prismaClient.js";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+export const signUp = async (req, res) => {
+  try {
+    const userInfo = req.body;
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = await bcrypt.hash(userInfo.password, salt);
+
+    await prisma.user.create({
+      data: {
+        email: userInfo.email,
+        name: userInfo.name,
+        password: hashPassword
+      }
+    })
+
+    res.status(200).json({ message: "Usuário cadastrado com sucesso!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Ocorreu um erro ao cadastrar o usuário!" });
+  }
+}
+
+export const signIn = async (req, res) => {
+  try {
+    const userInfo = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email: userInfo.email } });
+
+    if (!user) {
+      res.status(404).json({ message: "Usuário não encontrado!" });
+      console.error(user.data);
+    }
+
+    const match = await bcrypt.compare(userInfo.password, user.password);
+
+    if (!match) {
+      res.status(400).json({ message: "Senha inválida!" });
+    }
+
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1d" });
+
+    res.status(200).json({ token });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Ocorreu um erro ao fazer login!" });
+  }
+}
+
+src/middlewares/auth/authMiddleware.js:
+import jwt from 'jsonwebtoken';
+
+const JWT_SCRET = process.env.JWT_SECRET;
+
+const auth = (req, res, next) => {
+
+  const tokenBearer = req.headers.authorization;
+  const token = tokenBearer.replace("Bearer ", "");
+
+  if (!token) {
+    return res.satus(401).json({ message: "Acesso Negado!" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SCRET);
+
+    req.userId = decoded.id;
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Token Inválido!" });
+  }
+
+  next();
+}
+
+export default auth;
+
+src/routes/auth.js:
+import express from 'express';
+import { signIn, signUp } from '../controllers/auth/publicAuthController.js';
+import { login } from '../controllers/auth/privateAuthController.js';
+import auth from '../middlewares/auth/authMiddleware.js';
+
+const router = express.Router();
+
+router.post("/cadastro", signUp);
+router.post("/login", signIn);
+router.get("/listar-usuario", auth, login);
+
+export default router;
+
+src/routes/googleAuth.js:
+import express from 'express';
+import { googleAuthHandler } from '../controllers/auth/googleAuthHandler.js';
+
+const router = express.Router();
+
+router.post("/auth/google", googleAuthHandler);
+
+export default router;
+
+src/app.js:
+import express from 'express';
+import cors from 'cors';
+
+import authRoutes from './routes/auth.js';
+import cartRoutes from './routes/cart.js';
+import productRoutes from './routes/product.js';
+import adminRoutes from './routes/admin.js';
+import googleAuthRoutes from './routes/googleAuth.js';
+
+const app = express();
+
+app.use(express.json());
+app.use(cors());
+app.use("/", authRoutes);
+app.use("/", cartRoutes);
+app.use("/", productRoutes);
+app.use("/", adminRoutes);
+app.use("/", googleAuthRoutes);
+
+export default app;
+
+server.js:
+import app from "./src/app.js";
+
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
+});
