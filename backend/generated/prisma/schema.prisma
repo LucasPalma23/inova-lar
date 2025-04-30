@@ -29,3 +29,26 @@ model UserAdmin {
   password  String
   createdAt DateTime @default(now())
 }
+
+model Products {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  sku         Int      @unique
+  title       String
+  category    String
+  description String
+  price       Float
+  discount    Float?
+  amount      Int
+  stock       String   @default("Sem estoque")
+  image       String
+  createdAt   DateTime @default(now())
+}
+
+model Cart {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  title      String
+  quantity   Int
+  price      Float
+  totalPrice Float
+  createdAt  DateTime @default(now())
+}

@@ -126,6 +126,29 @@ exports.Prisma.UserAdminScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.ProductsScalarFieldEnum = {
+  id: 'id',
+  sku: 'sku',
+  title: 'title',
+  category: 'category',
+  description: 'description',
+  price: 'price',
+  discount: 'discount',
+  amount: 'amount',
+  stock: 'stock',
+  image: 'image',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.CartScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  quantity: 'quantity',
+  price: 'price',
+  totalPrice: 'totalPrice',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -139,7 +162,9 @@ exports.Prisma.QueryMode = {
 
 exports.Prisma.ModelName = {
   UserPublic: 'UserPublic',
-  UserAdmin: 'UserAdmin'
+  UserAdmin: 'UserAdmin',
+  Products: 'Products',
+  Cart: 'Cart'
 };
 
 /**

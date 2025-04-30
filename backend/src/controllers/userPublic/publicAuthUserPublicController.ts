@@ -2,6 +2,7 @@ import prisma from "../../prisma/prismaClient";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 
 // Cria uma variável que armazena minha chave secreta do JWT (jsonwebtoken) chamando ela do meu ".env"
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -12,24 +13,30 @@ if (!JWT_SECRET) {
 }
 
 // Cria uma interface para o meu SignUp declarando as minhas variáveis de dados do usuário como "String"
-interface BodyRequestSignUp {
-  name: string;
-  email: string;
-  password?: string;
-  providers: string;
-}
+const BodyRequestSignUp = z.object({
+  name: z.string().min(1),
+  email: z.string().min(1),
+  password: z.string().min(1).optional(),
+  providers: z.string(),
+})
 
 // Cria uma interface para o meu SignIn declarando as minhas variáveis de dados do usuário como "string"
-interface BodyRequestSignIn {
-  email: string;
-  password?: string;
-}
+const BodyRequestSignIn = z.object({
+  email: z.string().min(1),
+  password: z.string().min(1).optional(),
+})
 
 export const signUp = async (req: Request, res: Response): Promise<void> => {
-  const { name, email, password, providers }: BodyRequestSignUp = req.body;
+  const validatedData = BodyRequestSignUp.safeParse(req.body);
 
-  if (!name || !email || !password) {
+  if (!validatedData.success) {
     res.status(401).json({ success: false, error: "Todos os campos são obrigatórios!" });
+    return;
+  }
+  const { name, email, password, providers } = validatedData.data;
+
+  if (!password) {
+    console.error("A senha não existe!");
     return;
   }
 
@@ -60,10 +67,16 @@ export const signUp = async (req: Request, res: Response): Promise<void> => {
 }
 
 export const tokenGenerate = async (req: Request, res: Response): Promise<void> => {
-  const { email, password }: BodyRequestSignIn = req.body;
+  const validatedData = BodyRequestSignIn.safeParse(req.body);
 
-  if (!email || !password) {
+  if (!validatedData.success) {
     res.status(401).json({ success: false, error: "Todos os campos sào obrigatórios!" });
+    return;
+  }
+  const { email, password } = validatedData.data;
+
+  if (!password) {
+    console.error("A senha não existe!");
     return;
   }
 

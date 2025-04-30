@@ -2,6 +2,7 @@ import prisma from "../../prisma/prismaClient";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { Request, Response } from "express";
+import { z } from "zod";
 
 // Cria uma variável que armazena minha chave secreta do JWT (jsonwebtoken) chamando ela do meu ".env"
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -12,27 +13,29 @@ if (!JWT_SECRET) {
 }
 
 // Cria uma interface para o meu SignUp declarando as minhas variáveis de dados do usuário como "String"
-interface BodyRequestSignUp {
-  username: string;
-  password: string;
-}
+const BodyRequestSignUp = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+})
 
 // Cria uma interface para o meu SignIn declarando as minhas variáveis de dados do usuário como "string"
-interface BodyRequestSignIn {
-  username: string;
-  password: string
-}
+const BodyRequestSignIn = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+})
 
 // Cria uma função para criar um novo Usuário Administrativo
 export const signUp = async (req: Request, res: Response): Promise<void> => {
-  // Crias as variáveis que que armazenam os dados do usuário
-  const { username, password }: BodyRequestSignUp = req.body;
+  const validatedData = BodyRequestSignUp.safeParse(req.body);
 
-  // Verifica se todos os campos obrigatórios foram preenchidos
-  if (!username || !password) {
+  if (!validatedData.success) {
     res.status(401).json({ success: false, error: "Todos os campos são obrigatórios!" });
     return;
   }
+  // Crias as variáveis que que armazenam os dados do usuário
+  const { username, password } = validatedData.data;
+
+  // Verifica se todos os campos obrigatórios foram preenchidos
 
   // Cria uma varável com a senha do usuário criptografada
   const hashPassword = await bcrypt.hash(password, 15);
@@ -67,14 +70,16 @@ export const signUp = async (req: Request, res: Response): Promise<void> => {
 
 // Cria uma função que loga o usuário gerando um token
 export const signIn = async (req: Request, res: Response): Promise<void> => {
-  // Cria uma variável que armazena os dados do usuário
-  const { username, password }: BodyRequestSignIn = req.body;
+  const validatedData = BodyRequestSignIn.safeParse(req.body);
 
-  // Verifica se todos os campos obrigatórios foram preenchidos
-  if (!username || !password) {
+  if (!validatedData.success) {
     res.status(401).json({ success: false, error: "Todos os campos são obrigatórios!" });
     return;
   }
+  // Cria uma variável que armazena os dados do usuário
+  const { username, password } = validatedData.data;
+
+  // Verifica se todos os campos obrigatórios foram preenchidos
 
 
   try {
